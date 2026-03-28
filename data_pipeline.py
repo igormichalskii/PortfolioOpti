@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from pypfopt import expected_returns, risk_models, black_litterman, HRPOpt
 from pypfopt.black_litterman import BlackLittermanModel
-from pypfopt.efficient_frontier import EfficientFrontier, EfficientRiskParity
+from pypfopt.efficient_frontier import EfficientFrontier
 
 def fetch_market_data(tickers, start_date, end_date):
     # Download the data. We only care about Close, since now Close column is adjusted for splits and dividends.
@@ -57,6 +57,7 @@ def optimize_markowitz(prices):
     # The Optimizer
     ef = EfficientFrontier(mu, S)
 
+    raw_weights = ef.max_sharpe()
     # Clean the weights: Round off microscopic fractions. Zeros out anything under 1%.
     cleaned_weights = ef.clean_weights()
 
@@ -83,6 +84,8 @@ def optimize_black_litterman(prices, benchmark_prices, mcaps, views):
 
     # Optimize using the new BL returns, and covariance
     ef = EfficientFrontier(bl_returns, bl_cov)
+    raw_weights = ef.max_sharpe()
+    
     cleaned_weights = ef.clean_weights()
     performance = ef.portfolio_performance(verbose=False)
 
@@ -97,16 +100,16 @@ def optimize_hrp(prices, returns):
 
     return cleaned_weights, performance
 
-def optimzie_risk_parity(prices):
-    S = risk_models.CovarianceShrinkage(prices).ledoit_wolf()
+# def optimzie_risk_parity(prices):
+#     S = risk_models.CovarianceShrinkage(prices).ledoit_wolf()
 
-    erp = EfficientRiskParity(cov_matrix=S)
-    erp.optimize()
+#     erp = EfficientRiskParity(cov_matrix=S)
+#     erp.optimize()
 
-    cleaned_weights = erp.clean_weights()
-    performance = erp.portfolio_performance(verbose=False)
+#     cleaned_weights = erp.clean_weights()
+#     performance = erp.portfolio_performance(verbose=False)
 
-    return cleaned_weights, performance
+#     return cleaned_weights, performance
 
 def run_backtest(returns, weights, benchmark_returns):
     weight_array = np.array([weights.get(ticker, 0.0) for ticker in returns.columns])
