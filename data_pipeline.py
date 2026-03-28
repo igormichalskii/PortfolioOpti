@@ -179,6 +179,27 @@ def plot_monte_carlo_ef(prices, n_portfolios=3000):
 
     return fig
 
+def plot_backtest(returns, weights, benchmark_prices):
+    weight_array = np.array([weights.get(ticker, 0.0) for ticker in returns.columns])
+
+    port_daily = returns.dot(weight_array)
+
+    port_cum = (1 + port_daily).cumprod() - 1
+
+    bench_returns = benchmark_prices.pct_change().dropna()
+    bench_returns = bench_returns.reindex(port_daily.index).fillna(0)
+    bench_cum = (1 + bench_returns).cumprod() - 1
+
+    fig, ax = plt.subplots(figsize=(10,4))
+    ax.plot(port_cum.index, port_cum * 100, label='Optimized Portfolio', color='#00ffcc', linewidth=2)
+    ax.plot(bench_cum.index, bench_cum * 100, label='Benchmark (SPY)', color='gray', linestyle='--')
+
+    ax.set_title("Historical Backtest: You vs. The Market")
+    ax.set_ylabel("Cumulative Return (%)")
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+
+    return fig
 
 if __name__ == "__main__":
     # Example of usage

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from data_pipeline import fetch_market_data, optimize_markowitz, generate_export_report, optimize_hrp, optimize_black_litterman, plot_monte_carlo_ef
+from data_pipeline import fetch_market_data, optimize_markowitz, generate_export_report, optimize_hrp, optimize_black_litterman, plot_monte_carlo_ef, plot_backtest
 
 # --- Page Config ---
 st.set_page_config(page_title="Portfolio Optimization Tool", layout="wide")
@@ -14,6 +14,7 @@ tickers_input = st.sidebar.text_input("Tickers (comma separated)", "AAPL, MSFT, 
 start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
 end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
 model_choice = st.sidebar.selectbox("Optimization Model", ['Markowitz (Max Sharpe)', 'Hierarchical Risk Parity', 'Black-Litterman'])
+spy_prices, _ = fetch_market_data(['SPY'], start_date, end_date)
 
 # --- Main Execution ---
 if st.sidebar.button("Optimize"):
@@ -34,8 +35,6 @@ if st.sidebar.button("Optimize"):
             st.info("Using baseline market caps and neutral 5% views for demo stability.")
             mcaps = {t: 1000000000 for t in tickers}
             views = {t: 0.05 for t in tickers}
-
-            spy_prices, _ = fetch_market_data(['SPY'], start_date, end_date)
 
             weights, performance = optimize_black_litterman(prices, spy_prices, mcaps, views)
 
@@ -70,3 +69,7 @@ if st.sidebar.button("Optimize"):
                 file_name="optimized_portfolio.csv",
                 mime="text/csv"
             )
+        st.markdown("---")
+        st.subheader("Historical Performance Simulation")
+        backtest_fig = plot_backtest(returns, weights, spy_prices)
+        st.pyplot(backtest_fig)
