@@ -2,7 +2,7 @@ import pandas as pd
 from pypfopt import EfficientFrontier, risk_models, expected_returns
 import streamlit as st
 
-def optimize_markowitz(prices):
+def optimize_markowitz(prices, optimization_model):
     """Classic Mean-Variance Optimization. Maximizes the Sharpe Ratio."""
     try:
         if not isinstance(prices, pd.DataFrame):
@@ -14,7 +14,12 @@ def optimize_markowitz(prices):
         S = risk_models.CovarianceShrinkage(prices).ledoit_wolf()
 
         ef = EfficientFrontier(mu, S)
-        weights = ef.max_sharpe()
+        if optimization_model == 'model_min_vol':
+            ef.min_volatility()
+        elif optimization_model == 'model_max_qud':
+            ef.max_quadratic_utility()
+        else:
+            ef.max_quadratic_utility(risk_aversion=0.1)
 
         return ef.clean_weights(), ef.portfolio_performance(verbose=False)
     
@@ -24,7 +29,7 @@ def optimize_markowitz(prices):
         equal_weights = {col: 1.0/n_assets for col in prices.columns}
         return equal_weights, (0, 0, 0)
     
-def optimize_markowitz_constrained(prices, sector_map, max_weight=0.3):
+def optimize_markowitz_constrained(prices, optimization_model, sector_map, max_weight=0.3):
     """
     Markowitz, but forces diversification.
     Caps any single sector at a maximum weight (default 30%).
@@ -52,7 +57,12 @@ def optimize_markowitz_constrained(prices, sector_map, max_weight=0.3):
 
         ef.add_sector_constraints(sector_map, sector_lower, sector_upper)
 
-        weights = ef.max_sharpe()
+        if optimization_model == 'model_min_vol':
+            ef.min_volatility()
+        elif optimization_model == 'model_max_qud':
+            ef.max_quadratic_utility()
+        else:
+            ef.max_quadratic_utility(risk_aversion=0.1)
         return ef.clean_weights(), ef.portfolio_performance(verbose=False)
     
     except Exception as e:

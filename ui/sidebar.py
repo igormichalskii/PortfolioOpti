@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from data.processor import execution
 
 
 def create_sidebar():
@@ -28,15 +29,22 @@ def create_sidebar():
     start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
     end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
 
-    risk_profile = st.sidebar.selectbox(
-        "Risk Profile",
-        ["Conservative", "Balanced", "Aggressive"]
+    model_options = {
+        'Markowitz (Balanced)': 'model_markowitz',
+        'Markowitz (Conservative)': 'model_min_vol',
+        'Markowitz (Aggressive)': 'model_max_quad',
+        'Hierarchical Risk Parity': 'model_hrp',
+        'Risk Parity': 'model_risk_parity',
+        'Black-Litterman': 'model_black_litterman'
+    }
+    selected_model_choice = st.sidebar.selectbox(
+        "Optimization Model",
+        list(model_options.keys()),
+        index=0
     )
 
-    model_choice = st.sidebar.selectbox(
-        "Optimization Model",
-        ["Markowitz (Max Sharpe)", "Hierarchical Risk Parity", "Risk Parity", "Black-Litterman"]
-    )
+    optimization_model = model_options[selected_model_choice]
 
     apply_constraints = st.sidebar.checkbox("Apply Sector Constraints (Max 30%)", value=False)
-    return custom_tickers, selected_list, model_choice, apply_constraints, start_date, end_date
+    if st.sidebar.button("Optimize"):
+        execution(custom_tickers, selected_list, optimization_model, apply_constraints, start_date, end_date)
