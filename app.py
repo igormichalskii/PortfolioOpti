@@ -2,7 +2,19 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from data_pipeline import fetch_market_data, optimize_markowitz, generate_export_report, optimize_hrp, optimize_black_litterman, plot_monte_carlo_ef, plot_backtest, optimzie_risk_parity
+from data_pipeline import (
+    fetch_market_data, 
+    optimize_markowitz, 
+    generate_export_report, 
+    optimize_hrp, 
+    optimize_black_litterman, 
+    plot_monte_carlo_ef, 
+    plot_backtest, 
+    optimzie_risk_parity,
+    fetch_asset_info,
+    optimize_markowitz_constrained,
+    calculate_portfolio_dividend
+)
 
 # --- Page Config ---
 st.set_page_config(page_title="Portfolio Optimization Tool", layout="wide")
@@ -13,20 +25,33 @@ st.sidebar.header("Portfolio Parameters")
 tickers_input = st.sidebar.text_input("Tickers (comma separated)", "AAPL, MSFT, GOOG, TSLA")
 start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
 end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
-model_choice = st.sidebar.selectbox("Optimization Model", ['Markowitz (Max Sharpe)', 'Risk Parity', 'Hierarchical Risk Parity', 'Black-Litterman'])
-spy_prices, _ = fetch_market_data(['SPY'], start_date, end_date)
+apply_constraints = st.sidebar.checkbox("Apply Sector Constraints (Max 30%)", value=False)
+model_choice = st.sidebar.selectbox(
+    "Optimization Model", 
+    [
+        'Markowitz (Max Sharpe)', 
+        'Risk Parity', 
+        'Hierarchical Risk Parity', 
+        'Black-Litterman'
+    ]
+)
 
 # --- Main Execution ---
 if st.sidebar.button("Optimize"):
     tickers = [t.strip().upper() for t in tickers_input.split(',')]
 
     with st.spinner("Crunching the numbers so you don't have to..."):
-        # Fetch Data
+        # 1. Fetch Data
         prices, returns = fetch_market_data(tickers, start_date, end_date)
+        spy_prices, _ = fetch_market_data(['SPY'], start_date, end_date)
+        sector_map, div_yields = fetch_asset_info(tickers)
 
-        # Optimize based on selection
+        # 2. Route to Model
         if model_choice == "Markowitz (Max Sharpe)":
-            weights, performance = optimize_markowitz(prices)
+            if apply_constraints:
+                weights, performance = optimize_markowitz_constrained(prices, sector_map)
+            else:
+                weights, performance = optimize_markowitz(prices)
 
         elif model_choice == "Hierarchical Risk Parity":
             weights, performance = optimize_hrp(prices, returns)
@@ -41,14 +66,16 @@ if st.sidebar.button("Optimize"):
 
             weights, performance = optimize_black_litterman(prices, spy_prices, mcaps, views)
 
+        # 3. KPI Cards
+        port_div_yield = calculate_portfolio_dividend(weights, div_yields)
         expected_return, volatility, sharpe = performance
-
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Expected Annual Return", f"{expected_return*100:.2f}%")
         col2.metric("Annual Volatility", f"{volatility*100:.2f}%")
         col3.metric("Sharpe Ration", f"{sharpe:.2f}")
+        col4.metric("Dividend Yield", f"{port_div_yield*100:.2f}%")
 
-        # Visuals & Weights Layout
+        # 4. Visuals
         st.markdown("---")
         chart_col, weight_col = st.columns([2, 1])
 
@@ -72,6 +99,8 @@ if st.sidebar.button("Optimize"):
                 file_name="optimized_portfolio.csv",
                 mime="text/csv"
             )
+
+        # 5. Backtest    
         st.markdown("---")
         st.subheader("Historical Performance Simulation")
         backtest_fig = plot_backtest(returns, weights, spy_prices)
