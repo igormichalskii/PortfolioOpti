@@ -3,16 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from data.fetcher import fetch_market_data, fetch_asset_info
+from data.processor import generate_export_report, calculate_portfolio_dividend
 from models.markowitz import optimize_markowitz, optimize_markowitz_constrained
 from models.black_litterman import optimize_black_litterman
 from models.hrp import optimize_hrp
 from models.risk_parity import optimzie_risk_parity
-from data_pipeline import (
-    generate_export_report, 
-    plot_monte_carlo_ef, 
-    plot_backtest,
-    calculate_portfolio_dividend
-)
+from plots.standard_plots import plot_monte_carlo_ef, plot_backtest
 
 # --- Page Config ---
 st.set_page_config(page_title="Portfolio Optimization Tool", layout="wide")
