@@ -2,9 +2,13 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from pypfopt import expected_returns, risk_models, black_litterman, HRPOpt, plotting
-from pypfopt.black_litterman import BlackLittermanModel
+import seaborn as sns
+from scipy.optimize import minimize
 from pypfopt.efficient_frontier import EfficientFrontier
+from pypfopt import expected_returns, risk_models, black_litterman, plotting
+from pypfopt.black_litterman import BlackLittermanModel
+from pypfopt.hierarchical_portfolio import HRPOpt
+
 
 def fetch_market_data(tickers, start_date, end_date):
     # Download the data. We only care about Close, since now Close column is adjusted for splits and dividends.
@@ -101,16 +105,36 @@ def optimize_hrp(prices, returns):
 
     return cleaned_weights, performance
 
-# def optimzie_risk_parity(prices):
-#     S = risk_models.CovarianceShrinkage(prices).ledoit_wolf()
+def optimzie_risk_parity(prices):
+    mu = expected_returns.mean_historical_return(prices)
+    S = risk_models.CovarianceShrinkage(prices).ledoit_wolf()
 
-#     erp = EfficientRiskParity(cov_matrix=S)
-#     erp.optimize()
+    n = len(prices.columns)
+    cov_matrix = S.values
 
-#     cleaned_weights = erp.clean_weights()
-#     performance = erp.portfolio_performance(verbose=False)
+    def risk_budget_objective(weights):
+        port_variance = weights.T @ cov_matrix @ weights
+        risk_contrib = np.multiply(weights, cov_matrix @ weights) / port_variance
+        return np.sum(np.square(risk_contrib - (1 / n)))
+    
+    constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
+    bounds = tuple((0, 1) for _ in range(n))
 
-#     return cleaned_weights, performance
+    init_guess = np.ones(n) / n
+
+    result = minimize(risk_budget_objective, init_guess, method='SLSQP', bounds=bounds, constraints=constraints)
+
+    raw_weights = result.x
+    raw_weights[raw_weights < 1e-4] = 0
+    raw_weights /= np.sum(raw_weights)
+
+    weights = dict(zip(prices.columns, raw_weights))
+
+    annual_return = np.dot(raw_weights, mu.values)
+    volatility = np.sqrt(raw_weights.T @ cov_matrix @ raw_weights)
+    sharpe = (annual_return - 0.02) / volatility if volatility > 0 else 0.0
+
+    return weights, (annual_return, volatility, sharpe)
 
 def run_backtest(returns, weights, benchmark_returns):
     weight_array = np.array([weights.get(ticker, 0.0) for ticker in returns.columns])

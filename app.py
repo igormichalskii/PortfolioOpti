@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from data_pipeline import fetch_market_data, optimize_markowitz, generate_export_report, optimize_hrp, optimize_black_litterman, plot_monte_carlo_ef, plot_backtest
+from data_pipeline import fetch_market_data, optimize_markowitz, generate_export_report, optimize_hrp, optimize_black_litterman, plot_monte_carlo_ef, plot_backtest, optimzie_risk_parity
 
 # --- Page Config ---
 st.set_page_config(page_title="Portfolio Optimization Tool", layout="wide")
@@ -13,7 +13,7 @@ st.sidebar.header("Portfolio Parameters")
 tickers_input = st.sidebar.text_input("Tickers (comma separated)", "AAPL, MSFT, GOOG, TSLA")
 start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
 end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
-model_choice = st.sidebar.selectbox("Optimization Model", ['Markowitz (Max Sharpe)', 'Hierarchical Risk Parity', 'Black-Litterman'])
+model_choice = st.sidebar.selectbox("Optimization Model", ['Markowitz (Max Sharpe)', 'Risk Parity', 'Hierarchical Risk Parity', 'Black-Litterman'])
 spy_prices, _ = fetch_market_data(['SPY'], start_date, end_date)
 
 # --- Main Execution ---
@@ -30,6 +30,9 @@ if st.sidebar.button("Optimize"):
 
         elif model_choice == "Hierarchical Risk Parity":
             weights, performance = optimize_hrp(prices, returns)
+
+        elif model_choice == "Risk Parity":
+            weights, performance = optimzie_risk_parity(prices)
 
         elif model_choice == "Black-Litterman":
             st.info("Using baseline market caps and neutral 5% views for demo stability.")
