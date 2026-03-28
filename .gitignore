@@ -6,4 +6,3 @@
 *.parquet
 *.csv
 /venv/
-/.devcontainer/
