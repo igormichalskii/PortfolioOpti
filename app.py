@@ -2,17 +2,15 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from data.fetcher import fetch_market_data, fetch_asset_info
+from models.markowitz import optimize_markowitz, optimize_markowitz_constrained
+from models.black_litterman import optimize_black_litterman
+from models.hrp import optimize_hrp
+from models.risk_parity import optimzie_risk_parity
 from data_pipeline import (
-    fetch_market_data, 
-    optimize_markowitz, 
     generate_export_report, 
-    optimize_hrp, 
-    optimize_black_litterman, 
     plot_monte_carlo_ef, 
-    plot_backtest, 
-    optimzie_risk_parity,
-    fetch_asset_info,
-    optimize_markowitz_constrained,
+    plot_backtest,
     calculate_portfolio_dividend
 )
 
@@ -90,7 +88,7 @@ if st.sidebar.button("Optimize"):
 
         with weight_col:
             st.subheader("Optimal Weights")
-            st.dataframe(weights, use_container_width=True)
+            st.dataframe(weights, width=True)
 
             csv_data = generate_export_report(weights, performance, 0.0)
             st.download_button(
